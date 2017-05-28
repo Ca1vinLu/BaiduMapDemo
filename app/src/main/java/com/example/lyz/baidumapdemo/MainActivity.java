@@ -3,6 +3,7 @@ package com.example.lyz.baidumapdemo;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 
 import android.support.v7.app.AppCompatActivity;
@@ -23,7 +24,11 @@ import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.map.PolygonOptions;
+import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.search.core.RouteLine;
+import com.baidu.mapapi.search.route.WalkingRouteLine;
 import com.baidu.trace.LBSTraceClient;
 import com.baidu.trace.Trace;
 import com.baidu.trace.model.OnTraceListener;
@@ -52,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
     private MyOrientationListener myOrientationListener;
     //--轨迹参数
 
+    List<LatLng> polylines = new ArrayList<>();
+
     // 轨迹服务ID
     private long serviceId = 141814;
     // 设备标识
@@ -77,6 +84,12 @@ public class MainActivity extends AppCompatActivity {
         getPersimmions();
         initTrace();
         initOritationListener();
+
+
+    }
+
+    private void drawTrace(){
+
 
 
     }
@@ -237,16 +250,22 @@ public class MainActivity extends AppCompatActivity {
             mCurrentLatitude = location.getLatitude();
             mCurrentLongitude = location.getLongitude();
             mCurrentAccracy=location.getRadius();
-
+            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+            MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(latLng);
 
             if (isFirstLocate)
             {
                 isFirstLocate = false;
-                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(latLng);
                 mBaiduMap.animateMapStatus(u);
+                polylines.add(latLng);
             }
 
+
+
+
+            polylines.add(polylines.size()-1,latLng);
+            PolylineOptions polylineOptions = new PolylineOptions().points(polylines).width(10).color(Color.RED);
+            mBaiduMap.addOverlay(polylineOptions);
 
 
             BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory
