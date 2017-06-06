@@ -67,7 +67,7 @@ public class MyOrientationListener implements SensorEventListener
             // 这里我们可以得到数据，然后根据需要来处理
             float x = event.values[SensorManager.DATA_X];
 
-            if( Math.abs(x- lastX) > 1.0 )
+            if( Math.abs(x- lastX) > 30.0 )
             {
                 onOrientationListener.onOrientationChanged(x);
             }

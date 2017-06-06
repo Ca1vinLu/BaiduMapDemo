@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     private OnTrackListener mTrackListener;
     private List<LatLng> trackPoints = new ArrayList<>();
     private HistoryTrackRequest historyTrackRequest = new HistoryTrackRequest();
-    private QueryCacheTrackRequest queryCacheTrackRequest=new QueryCacheTrackRequest();
+    private QueryCacheTrackRequest queryCacheTrackRequest = new QueryCacheTrackRequest();
 
 
     private PlanNode stNode;
@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
                 //判断是否需要向用户解释为什么需要申请该权限
                 if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                         Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                    Toast.makeText(MainActivity.this,"自Android 6.0开始需要打开位置权限",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "自Android 6.0开始需要打开位置权限", Toast.LENGTH_SHORT).show();
                 }
                 //请求权限
                 ActivityCompat.requestPermissions(this,
@@ -175,24 +175,13 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
                     @Override
                     public void onOrientationChanged(float x) {
                         mXDirection = (int) x;
-
                         Log.d("direction", String.valueOf(mXDirection));
-                        // 构造定位数据
-                        MyLocationData locData = new MyLocationData.Builder()
-                                .accuracy(mCurrentAccracy)
-                                // 此处设置开发者获取到的方向信息，顺时针0-360
-                                .direction(mXDirection)
-                                .latitude(mCurrentLatitude)
-                                .longitude(mCurrentLongitude).build();
-                        // 设置定位数据
-                        mBaiduMap.setMyLocationData(locData);
-                        // 设置自定义图标
-                        BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory
-                                .fromResource(R.drawable.direction);
-                        MyLocationConfiguration config = new MyLocationConfiguration(
-                                mCurrentMode, true, mCurrentMarker);
-                        mBaiduMap.setMyLocationConfiguration(config);
 
+                        // 设置定位数据
+                        MyLocationData locationDataData = mBaiduMap.getLocationData();
+
+                        MyLocationData locData = new MyLocationData.Builder().accuracy(locationDataData.accuracy).direction(mXDirection).latitude(locationDataData.latitude).longitude(locationDataData.longitude).build();
+                        mBaiduMap.setMyLocationData(locData);
                     }
                 });
     }
@@ -200,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     private void initTrace() {
         mTrace = new Trace(serviceId, entityName);
         mTraceClient = new LBSTraceClient(getApplicationContext());
-        mTraceClient.setInterval(2,10);
+        mTraceClient.setInterval(2, 10);
 
 
         // 初始化轨迹服务监听器
@@ -249,12 +238,13 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
                 if (StatusCodes.SUCCESS != response.getStatus()) {
                     Toast.makeText(context, response.getMessage(), Toast.LENGTH_SHORT).show();
                 } else if (0 == total) {
-                    Toast.makeText(context, "无数据", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(context, "无数据", Toast.LENGTH_SHORT).show();
                 } else {
-                    Point endPoint = response.getEndPoint();
-                    startTime = endPoint.getLocTime();
+//                    Point endPoint = response.getEndPoint();
+//                    startTime = endPoint.getLocTime();
                     List<TrackPoint> points = response.getTrackPoints();
                     if (null != points) {
+                        trackPoints.clear();
                         for (TrackPoint trackPoint : points) {
 //                            if (!CommonUtil.isZeroPoint(trackPoint.getLocation().getLatitude(),
 //                                    trackPoint.getLocation().getLongitude())) {
@@ -267,6 +257,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
                 //
 
+                Log.d(TAG, String.valueOf(trackPoints.size()));
                 drawHistoryTrack(trackPoints);
             }
         };
@@ -280,23 +271,23 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         historyTrackRequest.setProcessed(true);
 
 
-// 创建纠偏选项实例
+        // 创建纠偏选项实例
         ProcessOption processOption = new ProcessOption();
-// 设置需要去噪
+        // 设置需要去噪
         processOption.setNeedDenoise(true);
-// 设置需要抽稀
+        // 设置需要抽稀
         processOption.setNeedVacuate(true);
-// 设置需要绑路
-//        processOption.setNeedMapMatch(true);
-// 设置精度过滤值(定位精度大于100米的过滤掉)
-        processOption.setRadiusThreshold(100);
-// 设置交通方式为驾车
+        // 设置需要绑路
+        processOption.setNeedMapMatch(true);
+        // 设置精度过滤值(定位精度大于100米的过滤掉)
+        processOption.setRadiusThreshold(1500);
+        // 设置交通方式为驾车
         processOption.setTransportMode(TransportMode.riding);
-// 设置纠偏选项
+        // 设置纠偏选项
         historyTrackRequest.setProcessOption(processOption);
 
 
-// 设置里程填充方式为驾车
+        // 设置里程填充方式为驾车
         historyTrackRequest.setSupplementMode(SupplementMode.riding);
 
 
@@ -305,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         historyTrackRequest.setStartTime(startTime);
         historyTrackRequest.setEndTime(endTime);
         mTraceClient.queryHistoryTrack(historyTrackRequest, mTrackListener);
-        mTraceClient.queryCacheTrack(queryCacheTrackRequest,mTrackListener);
+        mTraceClient.queryCacheTrack(queryCacheTrackRequest, mTrackListener);
     }
 
     /**
@@ -315,29 +306,39 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         // 绘制新覆盖物前，清空之前的覆盖物
 //        mBaiduMap.clear();
         if (points == null || points.size() == 0) {
-            if (null != polylineOverlay) {
-                polylineOverlay.remove();
-                polylineOverlay = null;
-            }
+//            if (null != polylineOverlay) {
+//                polylineOverlay.remove();
+//                polylineOverlay = null;
+//            }
             return;
         }
 
-//        if (points.size() == 1) {
-//            OverlayOptions startOptions = new MarkerOptions().position(points.get(0)).icon(bmStart)
-//                    .zIndex(9).draggable(true);
-//            mBaiduMap.addOverlay(startOptions);
+        if (polylineOverlay != null)
+            polylineOverlay.remove();
+
+        mBaiduMap.clear();
+
+        if (points.size() == 1) {
+            MarkerOptions startOptions = new MarkerOptions().position(points.get(0)).icon(BitmapDescriptorFactory.fromAssetWithDpi("Icon_start.png"))
+                    .zIndex(9).draggable(true);
+            mBaiduMap.addOverlay(startOptions);
 //            animateMapStatus(points.get(0), 18.0f);
-//            return;
-//        }
+            return;
+        }
 
-        LatLng startPoint;
-        LatLng endPoint;
-
-        startPoint = points.get(0);
-        endPoint = points.get(points.size() - 1);
+//        LatLng startPoint;
+//        LatLng endPoint;
+//
+//        startPoint = points.get(0);
+//        endPoint = points.get(points.size() - 1);
 
 
         // 添加起点图标
+        OverlayOptions startOptions = new MarkerOptions().position(points.get(0)).icon(BitmapDescriptorFactory.fromAssetWithDpi("Icon_start.png"))
+                .zIndex(9).draggable(true);
+        mBaiduMap.addOverlay(startOptions);
+
+
 //        OverlayOptions startOptions = new MarkerOptions()
 //                .position(startPoint).icon(BitmapUtil.bmStart)
 //                .zIndex(9).draggable(true);
@@ -347,10 +348,11 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
         // 添加路线（轨迹）
         OverlayOptions polylineOptions = new PolylineOptions().width(10)
-                .color(Color.BLUE).points(points);
+                .color(Color.YELLOW).points(points);
 
 //        mBaiduMap.addOverlay(startOptions);
 //        mBaiduMap.addOverlay(endOptions);
+
         polylineOverlay = mBaiduMap.addOverlay(polylineOptions);
 
 //        OverlayOptions markerOptions =
@@ -400,6 +402,11 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         UiSettings uiSettings = mBaiduMap.getUiSettings();
         uiSettings.setOverlookingGesturesEnabled(false);
 
+        BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory
+                .fromResource(R.drawable.direction);
+        MyLocationConfiguration config = new MyLocationConfiguration(mCurrentMode, true, mCurrentMarker);
+        mBaiduMap.setMyLocationConfiguration(config);
+
 
         //卫星地图
 //        mBaiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
@@ -424,7 +431,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         option.setCoorType("bd09ll");
         //可选，默认gcj02，设置返回的定位结果坐标系
 
-        int span = 2000;
+        int span = 10000;
         option.setScanSpan(span);
         //可选，默认0，即仅定位一次，设置发起定位请求的间隔需要大于等于1000ms才是有效的
 
@@ -449,13 +456,11 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         option.SetIgnoreCacheException(false);
         //可选，默认false，设置是否收集CRASH信息，默认收集
 
-        option.setEnableSimulateGps(false);
+        option.setEnableSimulateGps(true);
         //可选，默认false，设置是否需要过滤GPS仿真结果，默认需要
 
         mLocationClient.setLocOption(option);
     }
-
-
 
 
     @Override
@@ -590,20 +595,24 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         public void onReceiveLocation(BDLocation location) {
             if (location == null || mMapView == null)
                 return;
-            MyLocationData myLocationData = new MyLocationData.Builder().accuracy(location.getRadius()).latitude(location.getLatitude()).longitude(location.getLongitude()).build();
-            mBaiduMap.setMyLocationData(myLocationData);
+
+
+            if (!isFirstLocate) {
+                MyLocationData myLocationData = new MyLocationData.Builder().accuracy(mCurrentAccracy).latitude(mCurrentLatitude).longitude(mCurrentLongitude).build();
+                mBaiduMap.setMyLocationData(myLocationData);
+            }
 
             mCurrentLatitude = location.getLatitude();
             mCurrentLongitude = location.getLongitude();
             mCurrentAccracy = location.getRadius();
             LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-            MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(latLng);
 
             stNode = PlanNode.withLocation(latLng);
 
             if (isFirstLocate) {
                 isFirstLocate = false;
-                mBaiduMap.animateMapStatus(u);
+                MyLocationData myLocationData = new MyLocationData.Builder().accuracy(location.getRadius()).latitude(location.getLatitude()).longitude(location.getLongitude()).build();
+                mBaiduMap.setMyLocationData(myLocationData);
 //                polylines.add(latLng);
             }
 
@@ -615,10 +624,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 //            mBaiduMap.addOverlay(polylineOptions);
 
 
-            BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory
-                    .fromResource(R.drawable.direction);
-            MyLocationConfiguration config = new MyLocationConfiguration(mCurrentMode, true, mCurrentMarker);
-            mBaiduMap.setMyLocationConfiguration(config);
+            centreToMyLoc();
 
             //获取定位结果
             StringBuffer sb = new StringBuffer(256);
@@ -716,6 +722,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         LatLng latLng = new LatLng(mCurrentLatitude, mCurrentLongitude);
         MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(latLng);
         mBaiduMap.animateMapStatus(u);
+
     }
 
 
@@ -790,10 +797,10 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     @Override
     protected void onStop() {
         super.onStop();
-        mLocationClient.stop();
-        myOrientationListener.stop();
-        mTraceClient.stopGather(mTraceListener);
-        mTraceClient.stopTrace(mTrace, mTraceListener);
+//        mLocationClient.stop();
+//        myOrientationListener.stop();
+//        mTraceClient.stopGather(mTraceListener);
+//        mTraceClient.stopTrace(mTrace, mTraceListener);
 
     }
 
