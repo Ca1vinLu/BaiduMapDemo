@@ -3,11 +3,14 @@ package com.example.lyz.baidumapdemo;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -27,8 +30,12 @@ import com.baidu.mapapi.map.MapPoi;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.Marker;
+import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.map.Overlay;
+import com.baidu.mapapi.map.OverlayOptions;
 import com.baidu.mapapi.map.PolygonOptions;
 import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.map.UiSettings;
@@ -53,16 +60,32 @@ import com.baidu.mapapi.search.route.WalkingRouteResult;
 import com.baidu.trace.LBSTraceClient;
 import com.baidu.trace.Trace;
 import com.baidu.trace.api.track.HistoryTrackRequest;
+import com.baidu.trace.api.track.HistoryTrackResponse;
+import com.baidu.trace.api.track.OnTrackListener;
+import com.baidu.trace.api.track.QueryCacheTrackRequest;
+import com.baidu.trace.api.track.QueryCacheTrackResponse;
+import com.baidu.trace.api.track.SupplementMode;
+import com.baidu.trace.api.track.TrackPoint;
 import com.baidu.trace.model.OnTraceListener;
+import com.baidu.trace.model.Point;
+import com.baidu.trace.model.ProcessOption;
 import com.baidu.trace.model.PushMessage;
+import com.baidu.trace.model.SortType;
+import com.baidu.trace.model.StatusCodes;
+import com.baidu.trace.model.TransportMode;
 import com.example.lyz.baidumapdemo.OverLay.WalkingRouteOverlay;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.R.id.message;
+
 public class MainActivity extends AppCompatActivity implements OnGetRoutePlanResultListener {
 
     private static final String TAG = "MainActivity";
+    private Context context;
     private final int SDK_PERMISSION_REQUEST = 127;
     private MapView mMapView;
     private BaiduMap mBaiduMap;
@@ -87,19 +110,25 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     private long serviceId = 141814;
     // 设备标识
     private String entityName = "myTrace";
-    // 是否需要对象存储服务，默认为：false，关闭对象存储服务。注：鹰眼 Android SDK v3.0以上版本支持随轨迹上传图像等对象数据，若需使用此功能，该参数需设为 true，且需导入bos-android-sdk-1.0.2.jar。
-    private boolean isNeedObjectStorage = false;
+
     // 初始化轨迹服务
     private Trace mTrace;
     // 初始化轨迹服务客户端
     private LBSTraceClient mTraceClient;
     private OnTraceListener mTraceListener;
+    private OnTrackListener mTrackListener;
+    private List<LatLng> trackPoints = new ArrayList<>();
+    private HistoryTrackRequest historyTrackRequest = new HistoryTrackRequest();
+    private QueryCacheTrackRequest queryCacheTrackRequest=new QueryCacheTrackRequest();
+
 
     private PlanNode stNode;
     private PlanNode enNode;
     private RoutePlanSearch mSearch;
     private WalkingRouteOverlay overlay;
 
+    public Overlay polylineOverlay = null;
+    private long startTime = (long) (System.currentTimeMillis() / 1000);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,7 +136,23 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_main);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {//如果 API level 是大于等于 23(Android 6.0) 时
+            //判断是否具有权限
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                //判断是否需要向用户解释为什么需要申请该权限
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                    Toast.makeText(MainActivity.this,"自Android 6.0开始需要打开位置权限",Toast.LENGTH_SHORT).show();
+                }
+                //请求权限
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                        1);
+            }
+        }
 
+        context = this;
         initView();
         initLocation();
         getPersimmions();
@@ -153,43 +198,168 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     }
 
     private void initTrace() {
-        mTrace = new Trace(serviceId, entityName, isNeedObjectStorage);
+        mTrace = new Trace(serviceId, entityName);
         mTraceClient = new LBSTraceClient(getApplicationContext());
+        mTraceClient.setInterval(2,10);
+
+
         // 初始化轨迹服务监听器
         mTraceListener = new OnTraceListener() {
-
             @Override
             public void onBindServiceCallback(int i, String s) {
 
             }
 
-            // 开启服务回调
             @Override
-            public void onStartTraceCallback(int status, String message) {
+            public void onStartTraceCallback(int i, String s) {
+
             }
 
-            // 停止服务回调
             @Override
-            public void onStopTraceCallback(int status, String message) {
+            public void onStopTraceCallback(int i, String s) {
+
             }
 
-            // 开启采集回调
             @Override
-            public void onStartGatherCallback(int status, String message) {
+            public void onStartGatherCallback(int i, String s) {
+
             }
 
-            // 停止采集回调
             @Override
-            public void onStopGatherCallback(int status, String message) {
+            public void onStopGatherCallback(int i, String s) {
+
             }
 
-            // 推送回调
             @Override
-            public void onPushCallback(byte messageNo, PushMessage message) {
+            public void onPushCallback(byte b, PushMessage pushMessage) {
+
             }
         };
 
+        mTrackListener = new OnTrackListener() {
+            @Override
+            public void onQueryCacheTrackCallback(QueryCacheTrackResponse queryCacheTrackResponse) {
+                super.onQueryCacheTrackCallback(queryCacheTrackResponse);
+            }
 
+            @Override
+            public void onHistoryTrackCallback(HistoryTrackResponse response) {
+                int total = response.getTotal();
+
+                if (StatusCodes.SUCCESS != response.getStatus()) {
+                    Toast.makeText(context, response.getMessage(), Toast.LENGTH_SHORT).show();
+                } else if (0 == total) {
+                    Toast.makeText(context, "无数据", Toast.LENGTH_SHORT).show();
+                } else {
+                    Point endPoint = response.getEndPoint();
+                    startTime = endPoint.getLocTime();
+                    List<TrackPoint> points = response.getTrackPoints();
+                    if (null != points) {
+                        for (TrackPoint trackPoint : points) {
+//                            if (!CommonUtil.isZeroPoint(trackPoint.getLocation().getLatitude(),
+//                                    trackPoint.getLocation().getLongitude())) {
+                            com.baidu.trace.model.LatLng latLng = trackPoint.getLocation();
+                            trackPoints.add(new LatLng(latLng.latitude, latLng.longitude));
+//                            }
+                        }
+                    }
+                }
+
+                //
+
+                drawHistoryTrack(trackPoints);
+            }
+        };
+
+    }
+
+    private void queryHistoryTrack() {
+        // 结束时间
+        long endTime = System.currentTimeMillis() / 1000;
+        // 查询新增的轨迹
+        historyTrackRequest.setProcessed(true);
+
+
+// 创建纠偏选项实例
+        ProcessOption processOption = new ProcessOption();
+// 设置需要去噪
+        processOption.setNeedDenoise(true);
+// 设置需要抽稀
+        processOption.setNeedVacuate(true);
+// 设置需要绑路
+//        processOption.setNeedMapMatch(true);
+// 设置精度过滤值(定位精度大于100米的过滤掉)
+        processOption.setRadiusThreshold(100);
+// 设置交通方式为驾车
+        processOption.setTransportMode(TransportMode.riding);
+// 设置纠偏选项
+        historyTrackRequest.setProcessOption(processOption);
+
+
+// 设置里程填充方式为驾车
+        historyTrackRequest.setSupplementMode(SupplementMode.riding);
+
+
+        historyTrackRequest.setServiceId(serviceId);
+        historyTrackRequest.setEntityName(entityName);
+        historyTrackRequest.setStartTime(startTime);
+        historyTrackRequest.setEndTime(endTime);
+        mTraceClient.queryHistoryTrack(historyTrackRequest, mTrackListener);
+        mTraceClient.queryCacheTrack(queryCacheTrackRequest,mTrackListener);
+    }
+
+    /**
+     * 绘制历史轨迹
+     */
+    public void drawHistoryTrack(List<LatLng> points) {
+        // 绘制新覆盖物前，清空之前的覆盖物
+//        mBaiduMap.clear();
+        if (points == null || points.size() == 0) {
+            if (null != polylineOverlay) {
+                polylineOverlay.remove();
+                polylineOverlay = null;
+            }
+            return;
+        }
+
+//        if (points.size() == 1) {
+//            OverlayOptions startOptions = new MarkerOptions().position(points.get(0)).icon(bmStart)
+//                    .zIndex(9).draggable(true);
+//            mBaiduMap.addOverlay(startOptions);
+//            animateMapStatus(points.get(0), 18.0f);
+//            return;
+//        }
+
+        LatLng startPoint;
+        LatLng endPoint;
+
+        startPoint = points.get(0);
+        endPoint = points.get(points.size() - 1);
+
+
+        // 添加起点图标
+//        OverlayOptions startOptions = new MarkerOptions()
+//                .position(startPoint).icon(BitmapUtil.bmStart)
+//                .zIndex(9).draggable(true);
+//        // 添加终点图标
+//        OverlayOptions endOptions = new MarkerOptions().position(endPoint)
+//                .icon(bmEnd).zIndex(9).draggable(true);
+
+        // 添加路线（轨迹）
+        OverlayOptions polylineOptions = new PolylineOptions().width(10)
+                .color(Color.BLUE).points(points);
+
+//        mBaiduMap.addOverlay(startOptions);
+//        mBaiduMap.addOverlay(endOptions);
+        polylineOverlay = mBaiduMap.addOverlay(polylineOptions);
+
+//        OverlayOptions markerOptions =
+//                new MarkerOptions().flat(true).anchor(0.5f, 0.5f).icon(bmArrowPoint)
+//                        .position(points.get(points.size() - 1))
+//                        .rotate((float) CommonUtil.getAngle(points.get(0), points.get(1)));
+//        mMoveMarker = (Marker) mBaiduMap.addOverlay(markerOptions);
+
+//        animateMapStatus(points);
     }
 
     private void initView() {
@@ -207,14 +377,14 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         mBaiduMap.setOnMapClickListener(new BaiduMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                enNode = PlanNode.withLocation(latLng);
-
-                mBaiduMap.clear();
-
-                mSearch.walkingSearch((new WalkingRoutePlanOption())
-                        .from(stNode).to(enNode));
-
-                Log.d(TAG, "map click");
+//                enNode = PlanNode.withLocation(latLng);
+//
+//                mBaiduMap.clear();
+//
+//                mSearch.walkingSearch((new WalkingRoutePlanOption())
+//                        .from(stNode).to(enNode));
+//
+//                Log.d(TAG, "map click");
             }
 
             @Override
@@ -225,9 +395,9 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
         mSearch = RoutePlanSearch.newInstance();
         mSearch.setOnGetRoutePlanResultListener(this);
-        overlay= new WalkingRouteOverlay(mBaiduMap);
+        overlay = new WalkingRouteOverlay(mBaiduMap);
         mBaiduMap.setBuildingsEnabled(false);
-        UiSettings uiSettings=mBaiduMap.getUiSettings();
+        UiSettings uiSettings = mBaiduMap.getUiSettings();
         uiSettings.setOverlookingGesturesEnabled(false);
 
 
@@ -254,23 +424,23 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         option.setCoorType("bd09ll");
         //可选，默认gcj02，设置返回的定位结果坐标系
 
-        int span = 20000;
+        int span = 2000;
         option.setScanSpan(span);
         //可选，默认0，即仅定位一次，设置发起定位请求的间隔需要大于等于1000ms才是有效的
 
-        option.setIsNeedAddress(true);
+        option.setIsNeedAddress(false);
         //可选，设置是否需要地址信息，默认不需要
 
         option.setOpenGps(true);
         //可选，默认false,设置是否使用gps
 
-        option.setLocationNotify(true);
+        option.setLocationNotify(false);
         //可选，默认false，设置是否当GPS有效时按照1S/1次频率输出GPS结果
 
-        option.setIsNeedLocationDescribe(true);
+        option.setIsNeedLocationDescribe(false);
         //可选，默认false，设置是否需要位置语义化结果，可以在BDLocation.getLocationDescribe里得到，结果类似于“在北京天安门附近”
 
-        option.setIsNeedLocationPoiList(true);
+        option.setIsNeedLocationPoiList(false);
         //可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
 
         option.setIgnoreKillProcess(false);
@@ -286,22 +456,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     }
 
 
-    public void searchButtonProcess() {
-        // 重置浏览节点的路线数据
-//        route = null;
 
-//        mBaiduMap.clear();
-        // 处理搜索按钮响应
-        // 设置起终点信息，对于tranist search 来说，城市名无意义
-
-
-        // 实际使用中请对起点终点城市进行正确的设定
-
-
-        mSearch.walkingSearch((new WalkingRoutePlanOption())
-                .from(stNode).to(enNode));
-
-    }
 
     @Override
     public void onGetWalkingRouteResult(WalkingRouteResult walkingRouteResult) {
@@ -362,7 +517,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 //                routeOverlay = overlay;
 
             overlay.setData(walkingRouteResult.getRouteLines().get(0));
-            List<WalkingRouteLine> data=walkingRouteResult.getRouteLines();
+//            List<WalkingRouteLine> data = walkingRouteResult.getRouteLines();
             overlay.addToMap();
 
 //            overlay.zoomToSpan();
@@ -449,13 +604,15 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
             if (isFirstLocate) {
                 isFirstLocate = false;
                 mBaiduMap.animateMapStatus(u);
-                polylines.add(latLng);
+//                polylines.add(latLng);
             }
 
+            queryHistoryTrack();
 
-            polylines.add(polylines.size() - 1, latLng);
-            PolylineOptions polylineOptions = new PolylineOptions().points(polylines).width(10).color(Color.RED);
-            mBaiduMap.addOverlay(polylineOptions);
+
+//            polylines.add(polylines.size() - 1, latLng);
+//            PolylineOptions polylineOptions = new PolylineOptions().points(polylines).width(10).color(Color.RED);
+//            mBaiduMap.addOverlay(polylineOptions);
 
 
             BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory
@@ -537,20 +694,20 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
             }
 
-            sb.append("\nlocationdescribe : ");
-            sb.append(location.getLocationDescribe());    //位置语义化信息
+//            sb.append("\nlocationdescribe : ");
+//            sb.append(location.getLocationDescribe());    //位置语义化信息
+//
+//            List<Poi> list = location.getPoiList();    // POI数据
+//            if (list != null) {
+//                sb.append("\npoilist size = : ");
+//                sb.append(list.size());
+//                for (Poi p : list) {
+//                    sb.append("\npoi= : ");
+//                    sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
+//                }
+//            }
 
-            List<Poi> list = location.getPoiList();    // POI数据
-            if (list != null) {
-                sb.append("\npoilist size = : ");
-                sb.append(list.size());
-                for (Poi p : list) {
-                    sb.append("\npoi= : ");
-                    sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
-                }
-            }
-
-//            Log.i("BaiduLocationApiDem", sb.toString());
+            Log.i("BaiduLocationApiDem", sb.toString());
         }
 
     }
@@ -635,8 +792,8 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         super.onStop();
         mLocationClient.stop();
         myOrientationListener.stop();
-        mTraceClient.stopTrace(mTrace, mTraceListener);
         mTraceClient.stopGather(mTraceListener);
+        mTraceClient.stopTrace(mTrace, mTraceListener);
 
     }
 
