@@ -7,6 +7,7 @@ import android.app.Application;
  */
 
 public class MapApplication extends Application {
+    public boolean isRegisterReceiver = false;
 
 
 }

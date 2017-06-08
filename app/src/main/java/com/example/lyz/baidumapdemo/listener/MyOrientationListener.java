@@ -1,4 +1,4 @@
-package com.example.lyz.baidumapdemo;
+package com.example.lyz.baidumapdemo.listener;
 
 import android.content.Context;
 import android.hardware.Sensor;
@@ -58,7 +58,7 @@ public class MyOrientationListener implements SensorEventListener {
             // 这里我们可以得到数据，然后根据需要来处理
             float x = event.values[SensorManager.DATA_X];
 
-            if (Math.abs(x - lastX) > 30.0) {
+            if (Math.abs(x - lastX) > 15.0) {
                 onOrientationListener.onOrientationChanged(x);
                 lastX = x;
             }

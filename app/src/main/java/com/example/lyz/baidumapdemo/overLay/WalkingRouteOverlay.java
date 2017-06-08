@@ -1,10 +1,6 @@
-/*
- * Copyright (C) 2016 Baidu, Inc. All Rights Reserved.
- */
-package com.example.lyz.baidumapdemo.OverLay;
+package com.example.lyz.baidumapdemo.overLay;
 
 import android.graphics.Color;
-import android.os.Bundle;
 import android.util.Log;
 
 import com.baidu.mapapi.map.BaiduMap;
@@ -17,29 +13,29 @@ import com.baidu.mapapi.map.OverlayOptions;
 import com.baidu.mapapi.map.Polyline;
 import com.baidu.mapapi.map.PolylineOptions;
 import com.baidu.mapapi.model.LatLng;
-import com.baidu.mapapi.search.route.BikingRouteLine;
+import com.baidu.mapapi.search.route.WalkingRouteLine;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 用于显示骑行路线的Overlay
+ * 用于显示步行路线的overlay，自3.4.0版本起可实例化多个添加在地图中显示
  */
-public class BikingRouteOverlay extends OverlayManager {
+public class WalkingRouteOverlay extends OverlayManager {
 
-    private BikingRouteLine mRouteLine = null;
+    private WalkingRouteLine mRouteLine = null;
 
-    public BikingRouteOverlay(BaiduMap baiduMap) {
+    public WalkingRouteOverlay(BaiduMap baiduMap) {
         super(baiduMap);
     }
 
     /**
      * 设置路线数据。
-     *
+     * 
      * @param line
      *            路线数据
      */
-    public void setData(BikingRouteLine line) {
+    public void setData(WalkingRouteLine line) {
         mRouteLine = line;
     }
 
@@ -52,32 +48,32 @@ public class BikingRouteOverlay extends OverlayManager {
         List<OverlayOptions> overlayList = new ArrayList<OverlayOptions>();
         if (mRouteLine.getAllStep() != null
                 && mRouteLine.getAllStep().size() > 0) {
-            for (BikingRouteLine.BikingStep step : mRouteLine.getAllStep()) {
-                Bundle b = new Bundle();
-                b.putInt("index", mRouteLine.getAllStep().indexOf(step));
-                if (step.getEntrance() != null) {
-                    overlayList.add((new MarkerOptions())
-                            .position(step.getEntrance().getLocation())
-                                    .rotate((360 - step.getDirection()))
-                                            .zIndex(10)
-                                                    .anchor(0.5f, 0.5f)
-                                                            .extraInfo(b)
-                                                                    .icon(BitmapDescriptorFactory
-                                                                            .fromAssetWithDpi("Icon_line_node.png")));
-                }
-
-                // 最后路段绘制出口点
-                if (mRouteLine.getAllStep().indexOf(step) == (mRouteLine
-                        .getAllStep().size() - 1) && step.getExit() != null) {
-                    overlayList.add((new MarkerOptions())
-                            .position(step.getExit().getLocation())
-                                    .anchor(0.5f, 0.5f)
-                                            .zIndex(10)
-                                                    .icon(BitmapDescriptorFactory
-                                                            .fromAssetWithDpi("Icon_line_node.png")));
-
-                }
-            }
+//            for (WalkingRouteLine.WalkingStep step : mRouteLine.getAllStep()) {
+//                Bundle b = new Bundle();
+//                b.putInt("index", mRouteLine.getAllStep().indexOf(step));
+//                if (step.getEntrance() != null) {
+//                    overlayList.add((new MarkerOptions())
+//                            .position(step.getEntrance().getLocation())
+//                                    .rotate((360 - step.getDirection()))
+//                                            .zIndex(10)
+//                                                    .anchor(0.5f, 0.5f)
+//                                                            .extraInfo(b)
+//                                                                    .icon(BitmapDescriptorFactory
+//                                                                            .fromAssetWithDpi("Icon_line_node.png")));
+//                }
+//
+//                // 最后路段绘制出口点
+//                if (mRouteLine.getAllStep().indexOf(step) == (mRouteLine
+//                        .getAllStep().size() - 1) && step.getExit() != null) {
+//                    overlayList.add((new MarkerOptions())
+//                            .position(step.getExit().getLocation())
+//                                    .anchor(0.5f, 0.5f)
+//                                            .zIndex(10)
+//                                                    .icon(BitmapDescriptorFactory
+//                                                            .fromAssetWithDpi("Icon_line_node.png")));
+//
+//                }
+//            }
         }
         // starting
         if (mRouteLine.getStarting() != null) {
@@ -102,7 +98,7 @@ public class BikingRouteOverlay extends OverlayManager {
         if (mRouteLine.getAllStep() != null
                 && mRouteLine.getAllStep().size() > 0) {
             LatLng lastStepLastPoint = null;
-            for (BikingRouteLine.BikingStep step : mRouteLine.getAllStep()) {
+            for (WalkingRouteLine.WalkingStep step : mRouteLine.getAllStep()) {
                 List<LatLng> watPoints = step.getWayPoints();
                 if (watPoints != null) {
                     List<LatLng> points = new ArrayList<LatLng>();
@@ -115,7 +111,7 @@ public class BikingRouteOverlay extends OverlayManager {
                     lastStepLastPoint = watPoints.get(watPoints.size() - 1);
                 }
             }
-
+            
         }
 
         return overlayList;
@@ -123,7 +119,7 @@ public class BikingRouteOverlay extends OverlayManager {
 
     /**
      * 覆写此方法以改变默认起点图标
-     *
+     * 
      * @return 起点图标
      */
     public BitmapDescriptor getStartMarker() {
@@ -134,7 +130,7 @@ public class BikingRouteOverlay extends OverlayManager {
     }
     /**
      * 覆写此方法以改变默认终点图标
-     *
+     * 
      * @return 终点图标
      */
     public BitmapDescriptor getTerminalMarker() {
@@ -143,17 +139,17 @@ public class BikingRouteOverlay extends OverlayManager {
 
     /**
      * 处理点击事件
-     *
+     * 
      * @param i
      *            被点击的step在
-     *            {@link com.baidu.mapapi.search.route.BikingRouteLine#getAllStep()}
+     *            {@link com.baidu.mapapi.search.route.WalkingRouteLine#getAllStep()}
      *            中的索引
      * @return 是否处理了该点击事件
      */
     public boolean onRouteNodeClick(int i) {
         if (mRouteLine.getAllStep() != null
                 && mRouteLine.getAllStep().get(i) != null) {
-            Log.i("baidumapsdk", "BikingRouteOverlay onRouteNodeClick");
+            Log.i("baidumapsdk", "WalkingRouteOverlay onRouteNodeClick");
         }
         return false;
     }

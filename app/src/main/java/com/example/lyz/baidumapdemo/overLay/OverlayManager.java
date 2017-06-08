@@ -1,4 +1,4 @@
-package com.example.lyz.baidumapdemo.OverLay;
+package com.example.lyz.baidumapdemo.overLay;
 
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BaiduMap.OnPolylineClickListener;
