@@ -10,36 +10,31 @@ import android.hardware.SensorManager;
  * Created by LYZ on 2017/5/27 0027.
  */
 
-public class MyOrientationListener implements SensorEventListener
-{
+public class MyOrientationListener implements SensorEventListener {
 
     private Context context;
     private SensorManager sensorManager;
     private Sensor sensor;
 
-    private float lastX ;
+    private float lastX;
 
-    private OnOrientationListener onOrientationListener ;
+    private OnOrientationListener onOrientationListener;
 
-    public MyOrientationListener(Context context)
-    {
+    public MyOrientationListener(Context context) {
         this.context = context;
     }
 
     // 开始
-    public void start()
-    {
+    public void start() {
         // 获得传感器管理器
         sensorManager = (SensorManager) context
                 .getSystemService(Context.SENSOR_SERVICE);
-        if (sensorManager != null)
-        {
+        if (sensorManager != null) {
             // 获得方向传感器
             sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         }
         // 注册
-        if (sensor != null)
-        {//SensorManager.SENSOR_DELAY_UI
+        if (sensor != null) {//SensorManager.SENSOR_DELAY_UI
             sensorManager.registerListener(this, sensor,
                     SensorManager.SENSOR_DELAY_UI);
         }
@@ -47,44 +42,38 @@ public class MyOrientationListener implements SensorEventListener
     }
 
     // 停止检测
-    public void stop()
-    {
+    public void stop() {
         sensorManager.unregisterListener(this);
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy)
-    {
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
     }
 
     @Override
-    public void onSensorChanged(SensorEvent event)
-    {
+    public void onSensorChanged(SensorEvent event) {
         // 接受方向感应器的类型
-        if (event.sensor.getType() == Sensor.TYPE_ORIENTATION)
-        {
+        if (event.sensor.getType() == Sensor.TYPE_ORIENTATION) {
             // 这里我们可以得到数据，然后根据需要来处理
             float x = event.values[SensorManager.DATA_X];
 
-            if( Math.abs(x- lastX) > 30.0 )
-            {
+            if (Math.abs(x - lastX) > 30.0) {
                 onOrientationListener.onOrientationChanged(x);
+                lastX = x;
             }
 //            Log.e("DATA_X", x+"");
-            lastX = x ;
+
 
         }
     }
 
-    public void setOnOrientationListener(OnOrientationListener onOrientationListener)
-    {
-        this.onOrientationListener = onOrientationListener ;
+    public void setOnOrientationListener(OnOrientationListener onOrientationListener) {
+        this.onOrientationListener = onOrientationListener;
     }
 
 
-    public interface OnOrientationListener
-    {
+    public interface OnOrientationListener {
         void onOrientationChanged(float x);
     }
 

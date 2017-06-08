@@ -5,10 +5,15 @@ import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -127,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     private RoutePlanSearch mSearch;
     private WalkingRouteOverlay overlay;
 
-    public Overlay polylineOverlay = null;
+    public Overlay polylineOverlay;
     private long startTime = (long) (System.currentTimeMillis() / 1000);
 
     @Override
@@ -136,21 +141,6 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_main);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {//如果 API level 是大于等于 23(Android 6.0) 时
-            //判断是否具有权限
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                //判断是否需要向用户解释为什么需要申请该权限
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                    Toast.makeText(MainActivity.this, "自Android 6.0开始需要打开位置权限", Toast.LENGTH_SHORT).show();
-                }
-                //请求权限
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                        1);
-            }
-        }
 
         context = this;
         initView();
@@ -159,6 +149,10 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         initTrace();
         initOritationListener();
 
+
+    }
+
+    private void getPermission() {
 
     }
 
@@ -178,11 +172,14 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
                         Log.d("direction", String.valueOf(mXDirection));
 
                         // 设置定位数据
-                        MyLocationData locationDataData = mBaiduMap.getLocationData();
+                        MyLocationData locationData = mBaiduMap.getLocationData();
 
-                        MyLocationData locData = new MyLocationData.Builder().accuracy(locationDataData.accuracy).direction(mXDirection).latitude(locationDataData.latitude).longitude(locationDataData.longitude).build();
-                        mBaiduMap.setMyLocationData(locData);
+                        if (locationData != null) {
+                            MyLocationData locData = new MyLocationData.Builder().accuracy(locationData.accuracy).direction(mXDirection).latitude(locationData.latitude).longitude(locationData.longitude).build();
+                            mBaiduMap.setMyLocationData(locData);
+                        }
                     }
+
                 });
     }
 
@@ -192,36 +189,42 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         mTraceClient.setInterval(2, 10);
 
 
+
         // 初始化轨迹服务监听器
         mTraceListener = new OnTraceListener() {
             @Override
             public void onBindServiceCallback(int i, String s) {
-
+                Log.d(TAG, "pushMessage:" + s);
             }
 
             @Override
             public void onStartTraceCallback(int i, String s) {
+                Log.d(TAG, "pushMessage:" + s);
 
             }
 
             @Override
             public void onStopTraceCallback(int i, String s) {
+                Log.d(TAG, "pushMessage:" + s);
 
             }
 
             @Override
             public void onStartGatherCallback(int i, String s) {
+                Log.d(TAG, "pushMessage:" + s);
 
             }
 
             @Override
             public void onStopGatherCallback(int i, String s) {
+                Log.d(TAG, "pushMessage:" + s);
 
             }
 
             @Override
             public void onPushCallback(byte b, PushMessage pushMessage) {
 
+                Log.d(TAG, "pushMessage:" + pushMessage.getMessage());
             }
         };
 
@@ -243,7 +246,9 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 //                    Point endPoint = response.getEndPoint();
 //                    startTime = endPoint.getLocTime();
                     List<TrackPoint> points = response.getTrackPoints();
-                    if (null != points) {
+                    Toast.makeText(context, "Trace返回"+String.valueOf(total)+"个点", Toast.LENGTH_SHORT).show();
+
+                    if (points!=null) {
                         trackPoints.clear();
                         for (TrackPoint trackPoint : points) {
 //                            if (!CommonUtil.isZeroPoint(trackPoint.getLocation().getLatitude(),
@@ -278,9 +283,9 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         // 设置需要抽稀
         processOption.setNeedVacuate(true);
         // 设置需要绑路
-        processOption.setNeedMapMatch(true);
+//        processOption.setNeedMapMatch(true);
         // 设置精度过滤值(定位精度大于100米的过滤掉)
-        processOption.setRadiusThreshold(1500);
+        processOption.setRadiusThreshold(150);
         // 设置交通方式为驾车
         processOption.setTransportMode(TransportMode.riding);
         // 设置纠偏选项
@@ -296,7 +301,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         historyTrackRequest.setStartTime(startTime);
         historyTrackRequest.setEndTime(endTime);
         mTraceClient.queryHistoryTrack(historyTrackRequest, mTrackListener);
-        mTraceClient.queryCacheTrack(queryCacheTrackRequest, mTrackListener);
+//        mTraceClient.queryCacheTrack(queryCacheTrackRequest, mTrackListener);
     }
 
     /**
@@ -305,7 +310,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     public void drawHistoryTrack(List<LatLng> points) {
         // 绘制新覆盖物前，清空之前的覆盖物
 //        mBaiduMap.clear();
-        if (points == null || points.size() == 0) {
+        if (points == null || points.size() < 2) {
 //            if (null != polylineOverlay) {
 //                polylineOverlay.remove();
 //                polylineOverlay = null;
@@ -318,13 +323,13 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
         mBaiduMap.clear();
 
-        if (points.size() == 1) {
-            MarkerOptions startOptions = new MarkerOptions().position(points.get(0)).icon(BitmapDescriptorFactory.fromAssetWithDpi("Icon_start.png"))
-                    .zIndex(9).draggable(true);
-            mBaiduMap.addOverlay(startOptions);
+//        if (points.size() == 1) {
+//            MarkerOptions startOptions = new MarkerOptions().position(points.get(0)).icon(BitmapDescriptorFactory.fromAssetWithDpi("Icon_start.png"))
+//                    .zIndex(9).draggable(true);
+//            mBaiduMap.addOverlay(startOptions);
 //            animateMapStatus(points.get(0), 18.0f);
-            return;
-        }
+//            return;
+//        }
 
 //        LatLng startPoint;
 //        LatLng endPoint;
@@ -596,9 +601,12 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
             if (location == null || mMapView == null)
                 return;
 
+            if (location.getLongitude() == 4.9e-324 && location.getLatitude() == 4.9e-324)
+                return;
+
 
             if (!isFirstLocate) {
-                MyLocationData myLocationData = new MyLocationData.Builder().accuracy(mCurrentAccracy).latitude(mCurrentLatitude).longitude(mCurrentLongitude).build();
+                MyLocationData myLocationData = new MyLocationData.Builder().direction(mXDirection).accuracy(mCurrentAccracy).latitude(mCurrentLatitude).longitude(mCurrentLongitude).build();
                 mBaiduMap.setMyLocationData(myLocationData);
             }
 
@@ -725,6 +733,14 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
     }
 
+    class MyAsyncTask extends AsyncTask{
+
+        @Override
+        protected Object doInBackground(Object[] params) {
+            return null;
+        }
+    }
+
 
     @TargetApi(23)
     private void getPersimmions() {
@@ -754,6 +770,40 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
             if (permissions.size() > 0) {
                 requestPermissions(permissions.toArray(new String[permissions.size()]), SDK_PERMISSION_REQUEST);
+            }
+        }
+
+        //后台运行权限
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            String packageName = getPackageName();
+            PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            boolean isIgnoring = powerManager.isIgnoringBatteryOptimizations(packageName);
+            if (!isIgnoring) {
+                Intent intent = new Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + packageName));
+                try {
+                    startActivity(intent);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+        //定位权限
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {//如果 API level 是大于等于 23(Android 6.0) 时
+            //判断是否具有权限
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                //判断是否需要向用户解释为什么需要申请该权限
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                    Toast.makeText(MainActivity.this, "自Android 6.0开始需要打开位置权限", Toast.LENGTH_SHORT).show();
+                }
+                //请求权限
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                        1);
             }
         }
     }
