@@ -109,7 +109,6 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     // 设备标识
     private String entityName = "myTrace";
     private MapApplication mapApplication;
-
     // 初始化轨迹服务
     private Trace mTrace;
     // 初始化轨迹服务客户端
@@ -158,8 +157,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
     private void initOrientationListener() {
         myOrientationListener = new MyOrientationListener(
                 getApplicationContext());
-        myOrientationListener
-                .setOnOrientationListener(new MyOrientationListener.OnOrientationListener() {
+        myOrientationListener.setOnOrientationListener(new MyOrientationListener.OnOrientationListener() {
                     @Override
                     public void onOrientationChanged(float x) {
                         mXDirection = x;
@@ -237,13 +235,13 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
             @Override
             public void onAddPointCallback(AddPointResponse addPointResponse) {
                 super.onAddPointCallback(addPointResponse);
-                Log.d(TAG,"addPoint");
+                Log.d(TAG, "addPoint");
             }
 
             @Override
             public void onAddPointsCallback(AddPointsResponse addPointsResponse) {
                 super.onAddPointsCallback(addPointsResponse);
-                Log.d(TAG,"addPoints");
+                Log.d(TAG, "addPoints");
 
             }
 
@@ -256,19 +254,19 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
                 } else if (0 == total) {
 //                    Toast.makeText(context, "无数据", Toast.LENGTH_SHORT).show();
                 } else {
+
+
 //                    Point endPoint = response.getEndPoint();
 //                    startTime = endPoint.getLocTime();
-                    List<TrackPoint> points = response.getTrackPoints();
 //                    mToast = Toast.makeText(context, "Trace返回" + String.valueOf(total) + "个点", Toast.LENGTH_SHORT);
 //                    mToast.show();
-
+                    List<TrackPoint> points = response.getTrackPoints();
                     if (points != null) {
                         trackPoints.clear();
                         for (TrackPoint trackPoint : points) {
-                            if (!MapUtils.isZeroPoint(trackPoint.getLocation().getLatitude(), trackPoint.getLocation().getLongitude())) {
-
-                                trackPoints.add(MapUtils.convertTrace2Map(trackPoint.getLocation()));
-                            }
+//                            if (!MapUtils.isZeroPoint(trackPoint.getLocation().getLatitude(), trackPoint.getLocation().getLongitude())) {
+                            trackPoints.add(MapUtils.convertTrace2Map(trackPoint.getLocation()));
+//                            }
                         }
                     }
                 }
@@ -385,8 +383,6 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         mBaiduMap.setMapStatus(msu);
 
 
-
-
         mBaiduMap.setBuildingsEnabled(false);
         UiSettings uiSettings = mBaiduMap.getUiSettings();
         uiSettings.setOverlookingGesturesEnabled(false);
@@ -401,9 +397,9 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
             public void onMapClick(LatLng latLng) {
                 enNode = PlanNode.withLocation(latLng);
 
-               if (walkingRouteOverlay !=null){
-                   walkingRouteOverlay.removeFromMap();
-               }
+                if (walkingRouteOverlay != null) {
+                    walkingRouteOverlay.removeFromMap();
+                }
 
 
                 mSearch.walkingSearch((new WalkingRoutePlanOption())
@@ -421,7 +417,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
     }
 
-    private void initRoutePlanSearch(){
+    private void initRoutePlanSearch() {
         mSearch = RoutePlanSearch.newInstance();
         mSearch.setOnGetRoutePlanResultListener(this);
         walkingRouteOverlay = new WalkingRouteOverlay(mBaiduMap);
@@ -460,7 +456,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
         option.setIsNeedLocationPoiList(false);
         //可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
 
-        option.setIgnoreKillProcess(false);
+        option.setIgnoreKillProcess(true);
         //可选，默认true，定位SDK内部是一个SERVICE，并放到了独立进程，设置是否在stop的时候杀死这个进程，默认不杀死
 
         option.SetIgnoreCacheException(false);
@@ -645,7 +641,7 @@ public class MainActivity extends AppCompatActivity implements OnGetRoutePlanRes
 
     }
 
-    class AutoQueryHistoryTrack implements Runnable{
+    class AutoQueryHistoryTrack implements Runnable {
 
         @Override
         public void run() {
